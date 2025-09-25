@@ -1,0 +1,14 @@
+{
+  "name": "booking-service",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "uuid": "^9.0.1"
+  }
+}
