@@ -8,7 +8,9 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "dotenv": "^17.2.2",
     "express": "^4.19.2",
+    "mongoose": "^8.18.2",
     "uuid": "^9.0.1"
   }
 }
