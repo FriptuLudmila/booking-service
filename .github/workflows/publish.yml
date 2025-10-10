@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: lewda853/fafcab-checkin-service
+  IMAGE_NAME: lewda853/fafcab-booking-service
 
 jobs:
   build-and-push:
