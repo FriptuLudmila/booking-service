@@ -15,38 +15,37 @@ app.use(express.json());
 
 /* ========= Env ========= */
 const {
-  PORT = 3001,
+  BOOKING_PORT = 3001,
 
   // Mongo
-  MONGO_URI = "mongodb://localhost:27017/", // e.g. mongodb://<user>:<pass>@localhost:27017/bookingservice?authSource=bookingservice
-  MONGO_DB_NAME = "bookingservice",
+  BOOKING_MONGO_URI = "mongodb://localhost:27017/", // e.g. mongodb://<user>:<pass>@localhost:27017/bookingservice?authSource=bookingservice
+  BOOKING_MONGO_DB_NAME = "bookingservice",
 
   // Task manager
-  MAX_CONCURRENT_TASKS = 10,
-  TASK_TIMEOUT = 30000, // ms
+  BOOKING_MAX_CONCURRENT_TASKS = 10,
+  BOOKING_TASK_TIMEOUT = 30000, // ms
 
   // Gateway (minimal)
+  BOOKING_GATEWAY_URL = "http://faf-mgmt-gateway:7000",
+  BOOKING_SERVICE_NAME = "booking-service"
 } = process.env;
-
-const GATEWAY_URL = "http://faf-mgmt-gateway:7000"
-const SERVICE_NAME = "booking-service"
 
 /* ========= Task manager config ========= */
 taskManager.updateConfig({
-  maxConcurrentTasks: parseInt(MAX_CONCURRENT_TASKS, 10),
-  taskTimeout: parseInt(TASK_TIMEOUT, 10),
+  maxConcurrentTasks: parseInt(BOOKING_MAX_CONCURRENT_TASKS, 10),
+  taskTimeout: parseInt(BOOKING_TASK_TIMEOUT, 10),
 });
 
 /* ========= Gateway registration (once) ========= */
 async function registerWithGatewayOnce() {
   console.log("[Gateway] Starting registration process...");
-  console.log(`[Gateway] Target URL: ${GATEWAY_URL}/register`);
-  console.log(`[Gateway] Service Name: ${SERVICE_NAME}`);
-  console.log(`[Gateway] Service Port: ${PORT}`);
+  console.log(`[Gateway] Target URL: ${BOOKING_GATEWAY_URL}/register`);
+  console.log(`[Gateway] Service Name: ${BOOKING_SERVICE_NAME}`);
+  console.log(`[Gateway] Service Port: ${BOOKING_PORT}`);
 
   const payload = {
-    serviceName: SERVICE_NAME,
-    port: Number(PORT),
+    serviceName: BOOKING_SERVICE_NAME,
+    port: Number(BOOKING_PORT),
     requiresAuth: false,
   };
   console.log("[Gateway] Registration payload:", JSON.stringify(payload, null, 2));
@@ -86,10 +85,10 @@ async function registerWithGatewayOnce() {
       console.error(`[Gateway] Error cause:`, e.cause);
     }
     if (e?.code === 'ECONNREFUSED') {
-      console.error(`[Gateway] 💡 Connection refused - Is the gateway running at ${GATEWAY_URL}?`);
+      console.error(`[Gateway] 💡 Connection refused - Is the gateway running at ${BOOKING_GATEWAY_URL}?`);
     }
     if (e?.code === 'ENOTFOUND') {
-      console.error(`[Gateway] 💡 Host not found - Check if ${GATEWAY_URL} is accessible`);
+      console.error(`[Gateway] 💡 Host not found - Check if ${BOOKING_GATEWAY_URL} is accessible`);
     }
     if (e?.code === 'ETIMEDOUT') {
       console.error(`[Gateway] 💡 Connection timeout - Gateway may be unreachable`);
@@ -98,13 +97,13 @@ async function registerWithGatewayOnce() {
 }
 
 /* ========= Mongo connection & init ========= */
-if (!MONGO_URI) {
+if (!BOOKING_MONGO_URI) {
   console.error("Missing MONGO_URI env var");
   process.exit(1);
 }
 
 try {
-  await mongoose.connect(MONGO_URI, { dbName: MONGO_DB_NAME });
+  await mongoose.connect(BOOKING_MONGO_URI, { dbName: BOOKING_MONGO_DB_NAME });
   console.log("Connected to MongoDB");
 } catch (err) {
   console.error("Mongo connection error:", err?.message || err);
