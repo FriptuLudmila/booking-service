@@ -4,26 +4,65 @@ import express from "express";
 import { v4 as uuid } from "uuid";
 import mongoose from "mongoose";
 import { calendarService } from "./calendarService.js";
-import { taskManager, TaskTimeoutError, ConcurrentTaskLimitError } from "./taskManager.js";
+import {
+  taskManager,
+  TaskTimeoutError,
+  ConcurrentTaskLimitError,
+} from "./taskManager.js";
 
 const app = express();
 app.use(express.json());
 
-/* ========= Mongo connection ========= */
+/* ========= Env ========= */
 const {
   PORT = 3001,
-  MONGO_URI = "mongodb://localhost:27017/",    // e.g. mongodb://<user>:<pass>@localhost:27017/bookingservice?authSource=bookingservice
-  MONGO_DB_NAME = "bookingservice", // optional if DB name is embedded in URI
+
+  // Mongo
+  MONGO_URI = "mongodb://localhost:27017/", // e.g. mongodb://<user>:<pass>@localhost:27017/bookingservice?authSource=bookingservice
+  MONGO_DB_NAME = "bookingservice",
+
+  // Task manager
   MAX_CONCURRENT_TASKS = 10,
-  TASK_TIMEOUT = 30000 // 30 seconds
+  TASK_TIMEOUT = 30000, // ms
+
+  // Gateway (minimal)
+  GATEWAY_URL="http://faf-mgmt-gateway:7000",
+  SERVICE_NAME = "booking-service",
 } = process.env;
 
-// Configure task manager
+/* ========= Task manager config ========= */
 taskManager.updateConfig({
   maxConcurrentTasks: parseInt(MAX_CONCURRENT_TASKS, 10),
-  taskTimeout: parseInt(TASK_TIMEOUT, 10)
+  taskTimeout: parseInt(TASK_TIMEOUT, 10),
 });
 
+/* ========= Gateway registration (once) ========= */
+async function registerWithGatewayOnce() {
+  try {
+    const res = await fetch(`${GATEWAY_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // Service-wide auth disabled; no endpoint customizations
+      body: JSON.stringify({
+        serviceName: SERVICE_NAME,
+        port: Number(PORT),
+        requiresAuth: false,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`[Gateway] register failed ${res.status}: ${text}`);
+      return;
+    }
+    const data = await res.json();
+    console.log("[Gateway] registered:", data);
+  } catch (e) {
+    console.warn("[Gateway] register error:", e?.message || e);
+  }
+}
+
+/* ========= Mongo connection & init ========= */
 if (!MONGO_URI) {
   console.error("Missing MONGO_URI env var");
   process.exit(1);
@@ -37,18 +76,21 @@ try {
   process.exit(1);
 }
 
-// Initialize Google Calendar service
+// Initialize Google Calendar service (your module)
 await calendarService.initialize();
+
+// Register with gateway once on startup (non-fatal if it fails)
+await registerWithGatewayOnce();
 
 /* ========= Schema & Model ========= */
 const bookingSchema = new mongoose.Schema(
   {
     bookingId: { type: String, required: true, unique: true, index: true },
-    userId:    { type: String, required: true, index: true },
-    room:      { type: String, required: true, index: true },
-    startTime: { type: Date,   required: true, index: true },
-    endTime:   { type: Date,   required: true, index: true },
-    createdAt: { type: Date,   default: Date.now, index: true },
+    userId: { type: String, required: true, index: true },
+    room: { type: String, required: true, index: true },
+    startTime: { type: Date, required: true, index: true },
+    endTime: { type: Date, required: true, index: true },
+    createdAt: { type: Date, default: Date.now, index: true },
     calendarEventId: { type: String }, // Google Calendar event ID
   },
   { versionKey: false }
@@ -64,7 +106,7 @@ const isValidDate = (s) => !Number.isNaN(new Date(s).getTime());
 const overlapsQuery = (start, end) => ({
   // overlap: existing.start < end AND existing.end > start
   startTime: { $lt: end },
-  endTime:   { $gt: start },
+  endTime: { $gt: start },
 });
 
 /* ========= Routes ========= */
@@ -77,7 +119,6 @@ const overlapsQuery = (start, end) => ({
  */
 app.post("/bookings", async (req, res) => {
   try {
-    // Execute with task manager (timeout & concurrency control)
     const result = await taskManager.executeTask(async () => {
       const { userId, room, startTime, endTime } = req.body || {};
       if (!userId || !room || !startTime || !endTime) {
@@ -111,7 +152,7 @@ app.post("/bookings", async (req, res) => {
         createdAt: new Date(),
       });
 
-      // Create Google Calendar event
+      // Create Google Calendar event (your module)
       const calendarEventId = await calendarService.createEvent({
         bookingId,
         userId,
@@ -153,7 +194,6 @@ app.post("/bookings", async (req, res) => {
  */
 app.get("/bookings", async (req, res) => {
   try {
-    // Execute with task manager (timeout & concurrency control)
     const result = await taskManager.executeTask(async () => {
       const { start, end } = req.query;
 
@@ -171,7 +211,9 @@ app.get("/bookings", async (req, res) => {
       }
 
       // Fetch; project out Mongo internals; remove createdAt and calendarEventId from response
-      const rows = await Booking.find(query, { _id: 0, __v: 0 }).sort({ startTime: 1 }).lean();
+      const rows = await Booking.find(query, { _id: 0, __v: 0 })
+        .sort({ startTime: 1 })
+        .lean();
       const response = rows.map(({ createdAt, calendarEventId, ...rest }) => rest);
       return res.status(200).json(response);
     });
@@ -197,22 +239,21 @@ app.get("/bookings", async (req, res) => {
  */
 app.delete("/bookings/:bookingId", async (req, res) => {
   try {
-    // Execute with task manager (timeout & concurrency control)
     const result = await taskManager.executeTask(async () => {
       const { bookingId } = req.params;
 
-      // Find the booking first to get calendar event ID
+      // Find first to get calendar event ID
       const booking = await Booking.findOne({ bookingId });
       if (!booking) {
         return res.status(404).json({ error: "Not Found" });
       }
 
-      // Delete from Google Calendar if event ID exists
+      // Remove from Google Calendar if present
       if (booking.calendarEventId) {
         await calendarService.deleteEventById(booking.calendarEventId);
       }
 
-      // Delete the booking from database
+      // Delete from DB
       await Booking.deleteOne({ bookingId });
 
       return res.status(204).send();
@@ -233,8 +274,10 @@ app.delete("/bookings/:bookingId", async (req, res) => {
   }
 });
 
+/* ========= Health ========= */
 app.get("/healthz", (_req, res) => res.send("ok"));
 
+/* ========= Listen ========= */
 app.listen(PORT, () => {
   console.log(`Booking service listening on :${PORT}`);
 });
