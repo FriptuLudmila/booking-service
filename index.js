@@ -26,9 +26,10 @@ const {
   TASK_TIMEOUT = 30000, // ms
 
   // Gateway (minimal)
-  GATEWAY_URL="http://faf-mgmt-gateway:7000",
-  SERVICE_NAME = "booking-service",
 } = process.env;
+
+const GATEWAY_URL = "http://faf-mgmt-gateway:7000"
+const SERVICE_NAME = "booking-service"
 
 /* ========= Task manager config ========= */
 taskManager.updateConfig({
