@@ -39,27 +39,61 @@ taskManager.updateConfig({
 
 /* ========= Gateway registration (once) ========= */
 async function registerWithGatewayOnce() {
+  console.log("[Gateway] Starting registration process...");
+  console.log(`[Gateway] Target URL: ${GATEWAY_URL}/register`);
+  console.log(`[Gateway] Service Name: ${SERVICE_NAME}`);
+  console.log(`[Gateway] Service Port: ${PORT}`);
+
+  const payload = {
+    serviceName: SERVICE_NAME,
+    port: Number(PORT),
+    requiresAuth: false,
+  };
+  console.log("[Gateway] Registration payload:", JSON.stringify(payload, null, 2));
+
   try {
+    console.log("[Gateway] Sending POST request to gateway...");
     const res = await fetch(`${GATEWAY_URL}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // Service-wide auth disabled; no endpoint customizations
-      body: JSON.stringify({
-        serviceName: SERVICE_NAME,
-        port: Number(PORT),
-        requiresAuth: false,
-      }),
+      body: JSON.stringify(payload),
     });
+
+    console.log(`[Gateway] Received response with status: ${res.status} ${res.statusText}`);
+    console.log(`[Gateway] Response headers:`, Object.fromEntries(res.headers.entries()));
 
     if (!res.ok) {
       const text = await res.text();
-      console.warn(`[Gateway] register failed ${res.status}: ${text}`);
+      console.error(`[Gateway] ❌ Registration failed!`);
+      console.error(`[Gateway] Status: ${res.status} ${res.statusText}`);
+      console.error(`[Gateway] Response body: ${text}`);
       return;
     }
+
     const data = await res.json();
-    console.log("[Gateway] registered:", data);
+    console.log("[Gateway] ✅ Successfully registered!");
+    console.log("[Gateway] Registration response:", JSON.stringify(data, null, 2));
   } catch (e) {
-    console.warn("[Gateway] register error:", e?.message || e);
+    console.error("[Gateway] ❌ Registration error - Exception caught:");
+    console.error(`[Gateway] Error type: ${e?.constructor?.name || 'Unknown'}`);
+    console.error(`[Gateway] Error message: ${e?.message || 'No message'}`);
+    console.error(`[Gateway] Error code: ${e?.code || 'No code'}`);
+    console.error(`[Gateway] Full error:`, e);
+
+    // Additional network-specific debugging
+    if (e?.cause) {
+      console.error(`[Gateway] Error cause:`, e.cause);
+    }
+    if (e?.code === 'ECONNREFUSED') {
+      console.error(`[Gateway] 💡 Connection refused - Is the gateway running at ${GATEWAY_URL}?`);
+    }
+    if (e?.code === 'ENOTFOUND') {
+      console.error(`[Gateway] 💡 Host not found - Check if ${GATEWAY_URL} is accessible`);
+    }
+    if (e?.code === 'ETIMEDOUT') {
+      console.error(`[Gateway] 💡 Connection timeout - Gateway may be unreachable`);
+    }
   }
 }
 
