@@ -1,3 +1,7 @@
+## Booking Service with Google Calendar Integration
+
+This service allows students and teachers to book rooms (main room or kitchen) for their needs and automatically syncs bookings with Google Calendar.
+
 ## Booking Service Communication Contract
 
 ### Synchronous Communication (REST API)
@@ -63,8 +67,61 @@ Cancels a specific booking.
 ## Prerequisites (Windows)
 
 - **PowerShell**
-- **Node.js 18+** 
+- **Node.js 18+**
 - **Python 3.9+** (for the helper script `run.py`)
+- **MongoDB** (running locally or remotely)
+
+---
+
+## Google Calendar Integration Setup - How To
+
+### 1. Create a Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the **Google Calendar API**:
+   - Navigate to "APIs & Services" > "Library"
+   - Search for "Google Calendar API"
+   - Click "Enable"
+
+### 2. Create a Service Account
+
+1. Navigate to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "Service Account"
+3. Fill in service account details and click "Create"
+4. Grant the service account appropriate roles (optional)
+5. Click "Done"
+
+### 3. Generate Service Account Key
+
+1. Click on the newly created service account
+2. Go to the "Keys" tab
+3. Click "Add Key" > "Create new key"
+4. Select "JSON" format
+5. Click "Create" - a JSON file will be downloaded
+6. Save this file as `google-credentials.json` in your project root
+
+### 4. Share Calendar with Service Account
+
+1. Open [Google Calendar](https://calendar.google.com/)
+2. Find the calendar you want to use (or create a new one)
+3. Click the three dots next to the calendar name > "Settings and sharing"
+4. Under "Share with specific people", click "Add people"
+5. Add the service account email (found in your credentials JSON file, looks like `service-account-name@project-id.iam.gserviceaccount.com`)
+6. Grant "Make changes to events" permission
+7. Click "Send"
+8. Note the Calendar ID from "Integrate calendar" section (or use `primary` for your main calendar)
+
+### 5. Configure Environment Variables
+
+Update your [.env](.env) file with:
+
+```env
+# Google Calendar Integration (Optional)
+GOOGLE_CREDENTIALS_PATH=./google-credentials.json
+GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
+TIMEZONE=America/New_York
+```
 
 ---
 
