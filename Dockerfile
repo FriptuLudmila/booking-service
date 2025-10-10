@@ -10,7 +10,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # Copy the app code
-COPY index.js ./
+COPY index.js calendarService.js taskManager.js ./
 
 # Default port; override with -e PORT=xxxx
 ENV PORT=3001
