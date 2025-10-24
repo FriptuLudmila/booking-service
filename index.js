@@ -303,9 +303,9 @@ app.delete("/bookings/:bookingId", async (req, res) => {
 });
 
 /* ========= Health ========= */
-app.get("/healthz", (_req, res) => res.send("ok"));
+app.get("/health", (_req, res) => res.send("ok"));
 
 /* ========= Listen ========= */
-app.listen(PORT, () => {
-  console.log(`Booking service listening on :${PORT}`);
+app.listen(BOOKING_PORT, () => {
+  console.log(`Booking service listening on :${BOOKING_PORT}`);
 });
