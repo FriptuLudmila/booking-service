@@ -1,19 +1,14 @@
-# syntax=docker/dockerfile:1
 FROM node:20-alpine
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install only production deps
 COPY package*.json ./
-# If you have package-lock.json, keep npm ci (faster, reproducible)
 RUN npm ci --omit=dev
 
-# Copy the app code
-COPY index.js calendarService.js taskManager.js ./
+COPY index.js calendarService.js taskManager.js discovery.js healthRoutes.js metrics.js middleware.js ./
 
-# Default port; override with -e PORT=xxxx
-ENV PORT=3001
-EXPOSE 3001
+ENV PORT=80
+EXPOSE 80
 
 CMD ["npm", "start"]
