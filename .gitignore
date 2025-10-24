@@ -11,3 +11,7 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+/.idea/.gitignore
+/.idea/booking-service.iml
+/.idea/modules.xml
+/.idea/vcs.xml

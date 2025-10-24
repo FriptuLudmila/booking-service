@@ -16,17 +16,11 @@ app.use(express.json());
 /* ========= Env ========= */
 const {
   BOOKING_PORT = 3001,
-
-  // Mongo
   BOOKING_MONGO_URI = "mongodb://localhost:27017/", // e.g. mongodb://<user>:<pass>@localhost:27017/bookingservice?authSource=bookingservice
   BOOKING_MONGO_DB_NAME = "bookingservice",
-
-  // Task manager
   BOOKING_MAX_CONCURRENT_TASKS = 10,
   BOOKING_TASK_TIMEOUT = 30000, // ms
-
-  // Gateway (minimal)
-  BOOKING_GATEWAY_URL = "http://faf-mgmt-gateway:7000",
+  GATEWAY_URI = "http://faf-mgmt-gateway:7000",
   BOOKING_SERVICE_NAME = "booking-service"
 } = process.env;
 
@@ -39,7 +33,7 @@ taskManager.updateConfig({
 /* ========= Gateway registration (once) ========= */
 async function registerWithGatewayOnce() {
   console.log("[Gateway] Starting registration process...");
-  console.log(`[Gateway] Target URL: ${BOOKING_GATEWAY_URL}/register`);
+  console.log(`[Gateway] Target URL: ${GATEWAY_URI}/register`);
   console.log(`[Gateway] Service Name: ${BOOKING_SERVICE_NAME}`);
   console.log(`[Gateway] Service Port: ${BOOKING_PORT}`);
 
@@ -52,7 +46,7 @@ async function registerWithGatewayOnce() {
 
   try {
     console.log("[Gateway] Sending POST request to gateway...");
-    const res = await fetch(`${GATEWAY_URL}/register`, {
+    const res = await fetch(`${GATEWAY_URI}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // Service-wide auth disabled; no endpoint customizations

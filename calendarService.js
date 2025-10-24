@@ -10,7 +10,7 @@ import fs from 'fs';
 class CalendarService {
   constructor() {
     this.calendar = null;
-    this.calendarId = process.env.GOOGLE_CALENDAR_ID;
+    this.calendarId = process.env.BOOKING_GOOGLE_CALENDAR_ID;
   }
 
   /**
@@ -18,7 +18,7 @@ class CalendarService {
    */
   async initialize() {
     try {
-      const credentialsPath = process.env.GOOGLE_CREDENTIALS_PATH;
+      const credentialsPath = process.env.BOOKING_GOOGLE_CREDENTIALS_PATH;
 
       if (!credentialsPath) {
         console.warn('GOOGLE_CREDENTIALS_PATH not set. Calendar integration disabled.');
@@ -76,11 +76,11 @@ class CalendarService {
         location: booking.room,
         start: {
           dateTime: booking.startTime.toISOString(),
-          timeZone: process.env.TIMEZONE || 'UTC',
+          timeZone: process.env.BOOKING_TIMEZONE || 'UTC',
         },
         end: {
           dateTime: booking.endTime.toISOString(),
-          timeZone: process.env.TIMEZONE || 'UTC',
+          timeZone: process.env.BOOKING_TIMEZONE || 'UTC',
         },
         extendedProperties: {
           private: {
