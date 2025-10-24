@@ -167,11 +167,17 @@ app.post("/bookings", async (req, res) => {
                     doc.calendarEventId = calendarEventId;
                     await doc.save();
                     calendarOperationsTotal.labels("create_event", "success").inc();
-                    console.log(`POST /bookings: Created calendar event ${calendarEventId}`);
+                    console.log(`POST /bookings: Calendar event ${calendarEventId} saved to booking`);
+                } else {
+                    console.warn(`POST /bookings: Calendar event creation returned null for booking ${bookingId}`);
                 }
             } catch (calError) {
                 calendarOperationsTotal.labels("create_event", "failure").inc();
-                console.error("POST /bookings: Calendar event creation failed:", calError);
+                console.error("POST /bookings: Calendar event creation failed:", calError.message);
+                if (calError.code) {
+                    console.error(`  API Error code: ${calError.code}`);
+                }
+                // Continue without calendar event - booking is still created
             }
 
             const { _id, calendarEventId: _calId, ...plain } = doc.toObject();
