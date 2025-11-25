@@ -12,6 +12,7 @@ import { healthHandler, loadHandler } from "./healthRoutes.js";
 import { metricsHandler } from "./metrics.js";
 import { prometheusMiddleware } from "./middleware.js";
 import { retryRegistration, startPingTask } from "./discovery.js";
+import { ShortBusClient } from "./shortbus.js";
 import {
     requestsTotal,
     requestDuration,
@@ -38,9 +39,18 @@ const {
     BOOKING_TASK_TIMEOUT = 30000, // ms
     GATEWAY_URL,
     DISCOVERY_URL,
+    SHORTBUS_URL = "localhost:50051",
 } = process.env;
 
 const SERVICE_NAME = "bookingService";
+
+// Initialize ShortBus client
+let shortbusClient = null;
+try {
+    shortbusClient = new ShortBusClient('booking-service', SHORTBUS_URL);
+} catch (error) {
+    console.error('[ShortBus] Failed to initialize client:', error.message);
+}
 
 taskManager.updateConfig({
     maxConcurrentTasks: parseInt(BOOKING_MAX_CONCURRENT_TASKS, 10),
@@ -153,6 +163,28 @@ app.post("/bookings", async (req, res) => {
 
             dbOperationsTotal.labels("create_booking", "success").inc();
             bookingsCreated.inc();
+
+            // Publish BroadcastCabOccupation event to ShortBus
+            if (shortbusClient) {
+                try {
+                    const date = start.toISOString().split('T')[0];
+                    const startTimeStr = start.toTimeString().split(' ')[0].substring(0, 5);
+                    const endTimeStr = end.toTimeString().split(' ')[0].substring(0, 5);
+
+                    await shortbusClient.publishBroadcastCabOccupation({
+                        date: date,
+                        startTime: startTimeStr,
+                        endTime: endTimeStr,
+                        bookingId: bookingId,
+                        userId: userId,
+                        timestamp: Date.now(),
+                    });
+                    console.log(`POST /bookings: Published BroadcastCabOccupation for booking ${bookingId}`);
+                } catch (shortbusError) {
+                    console.error('[ShortBus] Failed to publish occupation event:', shortbusError.message);
+                    // Continue - booking is still created
+                }
+            }
 
             try {
                 const calendarEventId = await calendarService.createEvent({
@@ -303,6 +335,33 @@ app.delete("/bookings/:bookingId", async (req, res) => {
     }
 });
 
-app.listen(BOOKING_PORT, () => {
+app.listen(BOOKING_PORT, async () => {
     console.log(`Booking service listening on :${BOOKING_PORT}`);
+    
+    // Start ShortBus client
+    if (shortbusClient) {
+        try {
+            await shortbusClient.start();
+            console.log('[ShortBus] Client started successfully');
+        } catch (error) {
+            console.error('[ShortBus] Failed to start client:', error.message);
+        }
+    }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    if (shortbusClient) {
+        await shortbusClient.stop();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully...');
+    if (shortbusClient) {
+        await shortbusClient.stop();
+    }
+    process.exit(0);
 });

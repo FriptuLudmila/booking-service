@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package dev.bytegrip.broker;
+
+import "google/protobuf/any.proto";
+
+option java_multiple_files = true;
+option java_package = "dev.bytegrip.broker";
+option java_outer_classname = "BrokerProto";
+option csharp_namespace = "ShortBus.Grpc";
+
+message Event {
+  string event_type = 1;
+  google.protobuf.Any payload = 2;
+  int64 timestamp = 3;
+  string correlation_id = 4;
+  string reply_to = 5;
+}
+
+message PublishRequest {
+  Event event = 1;
+}
+
+message PublishResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SubscribeTopicRequest {
+  string event_type = 1;
+  string subscriber_id = 2;
+}
+
+message SubscribeQueueRequest {
+  string event_type = 1;
+  string consumer_id = 2;
+}
+
+message Ack {
+  string event_id = 1;
+  bool processed = 2;
+}
+
+message ServiceLoad {
+  double cpu_percent = 1;
+  double memory_percent = 2;
+  int64 timestamp = 3;
+}
+
+message RegisterServiceRequest {
+  string service_name = 1;
+  string instance_id = 2;
+  string event_type = 3;
+}
+
+message RegisterServiceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReportLoadRequest {
+  string service_name = 1;
+  string instance_id = 2;
+  ServiceLoad load = 3;
+}
+
+message ReportLoadResponse {
+  bool success = 1;
+}
+
+message ProcessingFailure {
+  string event_type = 1;
+  string correlation_id = 2;
+  string instance_id = 3;
+  string error_message = 4;
+  int64 timestamp = 5;
+}
+
+message PrepareRequest {
+  string transaction_id = 1;
+  string participant_service = 2;
+  string operation = 3;
+}
+
+message PrepareResponse {
+  string transaction_id = 1;
+  bool vote_commit = 2;
+  string message = 3;
+}
+
+message CommitRequest {
+  string transaction_id = 1;
+  string participant_service = 2;
+}
+
+message CommitResponse {
+  string transaction_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message AbortRequest {
+  string transaction_id = 1;
+  string participant_service = 2;
+}
+
+message AbortResponse {
+  string transaction_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message TwoPhaseCommitRequest {
+  string transaction_id = 1;
+  repeated string participants = 2;
+  string operation_description = 3;
+}
+
+message TwoPhaseCommitResponse {
+  string transaction_id = 1;
+  bool committed = 2;
+  string result = 3;
+  repeated string failed_participants = 4;
+}
+
+service MessageBroker {
+  rpc Publish(PublishRequest) returns (PublishResponse);
+  
+  rpc SubscribeTopic(SubscribeTopicRequest) returns (stream Event);
+  
+  rpc SubscribeQueue(SubscribeQueueRequest) returns (stream Event);
+  
+  rpc RegisterService(RegisterServiceRequest) returns (RegisterServiceResponse);
+  
+  rpc ReportLoad(ReportLoadRequest) returns (ReportLoadResponse);
+  
+  rpc ExecuteTwoPhaseCommit(TwoPhaseCommitRequest) returns (TwoPhaseCommitResponse);
+}
+
+service TwoPhaseCommitParticipant {
+  rpc Prepare(PrepareRequest) returns (PrepareResponse);
+  
+  rpc Commit(CommitRequest) returns (CommitResponse);
+  
+  rpc Abort(AbortRequest) returns (AbortResponse);
+}

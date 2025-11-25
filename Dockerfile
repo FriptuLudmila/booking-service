@@ -6,7 +6,8 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY index.js calendarService.js taskManager.js discovery.js healthRoutes.js metrics.js middleware.js ./
+COPY index.js calendarService.js taskManager.js discovery.js healthRoutes.js metrics.js middleware.js shortbus.js ./
+COPY proto ./proto
 
 ENV PORT=80
 EXPOSE 80

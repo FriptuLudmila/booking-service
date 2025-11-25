@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package events;
+
+option java_multiple_files = true;
+option java_package = "events";
+option csharp_namespace = "BudgetingService.Events";
+
+message PingRequest {
+  string message = 1;
+  int64 timestamp = 2;
+  string from_service = 3;
+}
+
+message PingResponse {
+  string message = 1;
+  int64 timestamp = 2;
+  string original_message = 3;
+  string from_service = 4;
+}
+
+message CircuitBreakerTestRequest {
+  string correlation_id = 1;
+  int64 timestamp = 2;
+  string from_service = 3;
+  bool should_fail = 4;
+}
+
+message CircuitBreakerTestResponse {
+  string correlation_id = 1;
+  bool success = 2;
+  string message = 3;
+  int64 timestamp = 4;
+  string from_service = 5;
+}
+
+message NotificationRequest {
+  string user_id = 1;
+  string title = 2;
+  string message = 3;
+  string type = 4;
+  int64 timestamp = 5;
+}
+
+message BroadcastCabOccupation {
+  string date = 1;
+  string start_time = 2;
+  string end_time = 3;
+  string booking_id = 4;
+  string user_id = 5;
+  int64 timestamp = 6;
+}
